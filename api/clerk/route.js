@@ -28,6 +28,7 @@ export async function POST(req) {
         name: `${data.first_name} ${data.last_name}`,
         image: data.image_url,
     }
+    await userData.save();
     // Connect to the database
     await connectDB();
 
