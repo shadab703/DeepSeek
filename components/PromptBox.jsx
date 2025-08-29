@@ -1,10 +1,58 @@
 import { assets } from '@/assets/assets'
+import { useAppContext } from '@/context/AppContext';
+import axios from 'axios';
 import Image from 'next/image'
 import React, { useState } from 'react'
+import toast from 'react-hot-toast';
 
 const PromptBox = ({ setIsLoading, isLoading }) => {
 
     const [prompt, setPrompt] = useState('');
+    const { user, chats, setChats, selectedChat, setSelectedChat } = useAppContext();
+    const sendPrompt = async (e) => {
+        const promptCopy = prompt;
+        try {
+            e.preventDefault();
+            if (!user) return toast.error("Login to send message");
+            if (isLoading) return toast.error("Wait for the previous prompt response");
+            setIsLoading(true);
+            setPrompt("");
+            const userprompt = {
+                role: "user",
+                content: "prompt",
+                timestamp: Date.now()
+            }
+            // Saving user prompt in chat Array
+            setChats((prevChats) => prevChats.map((chat) => chat._id === selectedChat._id ? {
+                ...chat,
+                messages: [...chat.messages, userprompt]
+            } : chat));
+            // Saving User Prompt in Selected chat
+            setSelectedChat((prev) => ({
+                ...prev,
+                messages: [...prev.messages, userprompt]
+            }));
+            const { data } = await axios.post("/api/chat/ai", {
+                chatId: selectedChat._id,
+                prompt
+            });
+            if (data.success) {
+                setChats((prevChats) => prevChats.map((chat) => chat._id === selectedChat._id ?
+                    { ...chat, messages: [...chat.messages, data.data] } : chat));
+
+            } else {
+                toast.error(data.message);
+                setPrompt(promptCopy);
+            }
+
+        } catch (error) {
+            toast.error(error.message);
+            setPrompt(promptCopy);
+        } finally {
+            setIsLoading(false);
+        }
+
+    }
     return (
         <form className={`w-full ${false ? "max-w-3xl" : "max-w-2xl"} bg-[#404045] p-4 rounded-3xl mt-4 transition-all`}>
             <textarea
